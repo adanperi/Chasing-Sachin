@@ -7,17 +7,16 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces" });
 
 export const metadata: Metadata = {
-  title: '100 — Sachin Tendulkar\'s international centuries, on a globe',
-  description: 'Every international century Sachin Tendulkar ever scored. On a rotating globe. Watch 23 years of cricket history accumulate in 12 seconds.',
-  generator: 'v0.app',
+  title: 'Chasing Sachin — 100 international centuries on a globe',
+  description: 'Every international century Sachin Tendulkar ever scored. On a rotating globe. Watch 23 years of cricket history accumulate.',
   openGraph: {
     type: 'website',
-    title: '100 — Sachin Tendulkar\'s international centuries',
-    description: 'Every international century Sachin ever scored. On a rotating globe. Watch them accumulate.',
+    title: 'Chasing Sachin — 100 international centuries',
+    description: 'Every international century Sachin ever scored. On a rotating globe.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '100 — Sachin Tendulkar\'s international centuries',
+    title: 'Chasing Sachin — 100 international centuries',
     description: 'Every international century Sachin ever scored. On a rotating globe.',
   },
   icons: {

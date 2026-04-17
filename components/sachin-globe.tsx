@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 
 interface Century {
   n: number
@@ -32,9 +32,10 @@ export default function SachinGlobe() {
   const [centuries, setCenturies] = useState<Century[]>([])
   const [loading, setLoading] = useState(true)
   const [currentFilter, setCurrentFilter] = useState("all")
-  const [currentYear, setCurrentYear] = useState(1990)
+  const [currentYear, setCurrentYear] = useState(2012)
   const [playing, setPlaying] = useState(false)
   const [selectedCentury, setSelectedCentury] = useState<Century | null>(null)
+  const [selectedCountry, setSelectedCountry] = useState<string>("all")
   const [showIntro, setShowIntro] = useState(false)
   const [introText, setIntroText] = useState("23 years")
   const [showControls, setShowControls] = useState(false)
@@ -42,7 +43,6 @@ export default function SachinGlobe() {
   const idleRef = useRef<NodeJS.Timeout | null>(null)
   const interactedRef = useRef(false)
 
-  // Load data
   useEffect(() => {
     fetch("/centuries.json")
       .then((r) => r.json())
@@ -53,7 +53,6 @@ export default function SachinGlobe() {
       .catch(() => setLoading(false))
   }, [])
 
-  // Initialize globe
   useEffect(() => {
     if (loading || !containerRef.current || centuries.length === 0) return
 
@@ -64,11 +63,11 @@ export default function SachinGlobe() {
         .width(containerRef.current!.clientWidth)
         .height(containerRef.current!.clientHeight)
         .backgroundColor("#060a18")
-        .globeImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg")
+        .globeImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg")
         .showAtmosphere(true)
-        .atmosphereColor("#4ecdc4")
-        .atmosphereAltitude(0.18)
-        .pointsData([])
+        .atmosphereColor("#1a8cff")
+        .atmosphereAltitude(0.2)
+        .pointsData(centuries)
         .pointLat("lat")
         .pointLng("lon")
         .pointColor((d) => colorFor(d as Century))
@@ -87,7 +86,6 @@ export default function SachinGlobe() {
 
       globeRef.current = globe
 
-      // Country borders
       fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
         .then((r) => r.json())
         .then((world) => {
@@ -101,19 +99,13 @@ export default function SachinGlobe() {
         })
         .catch(() => {})
 
-      // Globe controls
       globe.controls().autoRotate = true
-      globe.controls().autoRotateSpeed = 0.25
+      globe.controls().autoRotateSpeed = 0.6
       globe.controls().enableDamping = true
       globe.pointOfView({ lat: 20, lng: 75, altitude: 2.3 }, 0)
 
-      // Show controls after delay
       setTimeout(() => setShowControls(true), 400)
 
-      // Start autoplay
-      setTimeout(() => startAutoplay(), 1200)
-
-      // Resize handler
       const handleResize = () => {
         if (containerRef.current) {
           globe.width(containerRef.current.clientWidth).height(containerRef.current.clientHeight)
@@ -128,7 +120,6 @@ export default function SachinGlobe() {
     })
   }, [loading, centuries])
 
-  // TopoJSON helper
   function topoFeature(topology: any, obj: any) {
     function arcFn(i: number, points: number[][]) {
       if (points.length) points.pop()
@@ -163,23 +154,40 @@ export default function SachinGlobe() {
     }
   }
 
-  // Apply filters
+  const countryList = useMemo(() => {
+    const seen = new Set<string>()
+    centuries.forEach((c) => seen.add(c.country))
+    return Array.from(seen).sort()
+  }, [centuries])
+
+  const stats = useMemo(() => {
+    let data = centuries
+    if (currentFilter === "Test" || currentFilter === "ODI") data = data.filter((c) => c.format === currentFilter)
+    else if (currentFilter === "Home" || currentFilter === "Away" || currentFilter === "Neutral")
+      data = data.filter((c) => c.venueType === currentFilter)
+    if (selectedCountry !== "all") data = data.filter((c) => c.country === selectedCountry)
+    data = data.filter((c) => c.year <= currentYear)
+    const test = data.filter((c) => c.format === "Test").length
+    const odi = data.filter((c) => c.format === "ODI").length
+    return { total: data.length, test, odi }
+  }, [centuries, currentFilter, selectedCountry, currentYear])
+
   const applyFilters = useCallback(
-    (filter: string, year: number) => {
+    (filter: string, year: number, country: string) => {
       if (!globeRef.current) return
       let data = centuries
       if (filter === "Test" || filter === "ODI") data = data.filter((c) => c.format === filter)
       else if (filter === "Home" || filter === "Away" || filter === "Neutral") data = data.filter((c) => c.venueType === filter)
+      if (country !== "all") data = data.filter((c) => c.country === country)
       data = data.filter((c) => c.year <= year)
       globeRef.current.pointsData(data)
     },
     [centuries]
   )
 
-  // Update globe when filters change
   useEffect(() => {
-    applyFilters(currentFilter, currentYear)
-  }, [currentFilter, currentYear, applyFilters])
+    applyFilters(currentFilter, currentYear, selectedCountry)
+  }, [currentFilter, currentYear, selectedCountry, applyFilters])
 
   const handleUserInteract = useCallback(() => {
     if (playing) {
@@ -241,6 +249,12 @@ export default function SachinGlobe() {
     setSelectedCentury(null)
   }
 
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleUserInteract()
+    setSelectedCountry(e.target.value)
+    setSelectedCentury(null)
+  }
+
   const handleCardClose = () => {
     setSelectedCentury(null)
     if (globeRef.current) {
@@ -254,7 +268,7 @@ export default function SachinGlobe() {
 
   const handleShare = async () => {
     const url = window.location.href
-    const shareData = { title: "Sachin's 100 centuries, on a globe", text: "Every international century Sachin ever scored.", url }
+    const shareData = { title: "Chasing Sachin — 100 international centuries", text: "Every international century Sachin ever scored.", url }
     if (navigator.share) {
       try {
         await navigator.share(shareData)
@@ -266,13 +280,6 @@ export default function SachinGlobe() {
     }
   }
 
-  const filteredCount = centuries.filter((c) => {
-    let match = true
-    if (currentFilter === "Test" || currentFilter === "ODI") match = c.format === currentFilter
-    else if (currentFilter === "Home" || currentFilter === "Away" || currentFilter === "Neutral") match = c.venueType === currentFilter
-    return match && c.year <= currentYear
-  }).length
-
   const chips = [
     { filter: "all", label: "All 100" },
     { filter: "Test", label: "Test (51)" },
@@ -281,6 +288,8 @@ export default function SachinGlobe() {
     { filter: "Away", label: "Away (40)" },
     { filter: "Neutral", label: "Neutral (18)" },
   ]
+
+  const maxBar = Math.max(stats.test, stats.odi, 1)
 
   return (
     <div className="app">
@@ -293,10 +302,10 @@ export default function SachinGlobe() {
       <div className="header">
         <div className="brand">
           <div className="title">100</div>
-          <div className="subtitle">Sachin&apos;s international centuries, 1990 - 2012</div>
+          <div className="subtitle">Sachin&apos;s international centuries, 1990 – 2012</div>
         </div>
         <div className="counter-wrap">
-          <div className={`counter ${playing ? "playing" : ""}`}>{filteredCount}</div>
+          <div className={`counter ${playing ? "playing" : ""}`}>{stats.total}</div>
           <div className="counter-label">centuries</div>
         </div>
       </div>
@@ -313,19 +322,46 @@ export default function SachinGlobe() {
         Share
       </button>
 
-      {/* Legend */}
-      <div className={`legend ${showControls ? "visible" : ""}`}>
-        <div className="legend-item">
-          <span className="dot" style={{ background: "#ffd166" }} />
-          Home
+      {/* Legend + Stats Panel */}
+      <div className={`left-panel ${showControls ? "visible" : ""}`}>
+        <div className="legend">
+          <div className="legend-item">
+            <span className="dot" style={{ background: "#ffd166" }} />
+            Home
+          </div>
+          <div className="legend-item">
+            <span className="dot" style={{ background: "#4ecdc4" }} />
+            Away
+          </div>
+          <div className="legend-item">
+            <span className="dot" style={{ background: "#c9c9c9" }} />
+            Neutral
+          </div>
         </div>
-        <div className="legend-item">
-          <span className="dot" style={{ background: "#4ecdc4" }} />
-          Away
-        </div>
-        <div className="legend-item">
-          <span className="dot" style={{ background: "#c9c9c9" }} />
-          Neutral
+
+        {/* Test / ODI breakdown bar chart */}
+        <div className="stats-panel">
+          <div className="stats-title">Format breakdown</div>
+          <div className="stats-row">
+            <span className="stats-label">Test</span>
+            <div className="stats-bar-wrap">
+              <div
+                className="stats-bar"
+                style={{ width: `${(stats.test / maxBar) * 100}%`, background: "#4ecdc4" }}
+              />
+            </div>
+            <span className="stats-num">{stats.test}</span>
+          </div>
+          <div className="stats-row">
+            <span className="stats-label">ODI</span>
+            <div className="stats-bar-wrap">
+              <div
+                className="stats-bar"
+                style={{ width: `${(stats.odi / maxBar) * 100}%`, background: "#ffd166" }}
+              />
+            </div>
+            <span className="stats-num">{stats.odi}</span>
+          </div>
         </div>
       </div>
 
@@ -393,6 +429,23 @@ export default function SachinGlobe() {
             </button>
           ))}
         </div>
+
+        {/* Country filter */}
+        <div className="country-row">
+          <select
+            className="country-select"
+            value={selectedCountry}
+            onChange={handleCountryChange}
+          >
+            <option value="all">All Countries</option>
+            {countryList.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="timeline">
           <button className="play-btn" onClick={handlePlayClick} title="Replay timeline">
             {playing ? (
@@ -496,7 +549,7 @@ export default function SachinGlobe() {
 
         .intro {
           position: absolute;
-          bottom: 140px;
+          bottom: 160px;
           left: 50%;
           transform: translateX(-50%);
           font-family: "Fraunces", serif;
@@ -601,6 +654,83 @@ export default function SachinGlobe() {
           background: rgba(255, 255, 255, 0.08);
         }
 
+        /* Left panel: legend + stats */
+        .left-panel {
+          position: absolute;
+          top: 108px;
+          left: 22px;
+          z-index: 5;
+          opacity: 0;
+          transition: opacity 0.8s;
+        }
+        .left-panel.visible {
+          opacity: 1;
+        }
+
+        .legend {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          font-size: 11px;
+          color: #8892a6;
+        }
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        /* Stats bar chart */
+        .stats-panel {
+          margin-top: 16px;
+          width: 130px;
+        }
+        .stats-title {
+          font-size: 9px;
+          color: #8892a6;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .stats-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 6px;
+        }
+        .stats-label {
+          font-size: 10px;
+          color: #8892a6;
+          width: 22px;
+          flex-shrink: 0;
+        }
+        .stats-bar-wrap {
+          flex: 1;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .stats-bar {
+          height: 100%;
+          border-radius: 2px;
+          transition: width 0.4s ease;
+        }
+        .stats-num {
+          font-size: 10px;
+          color: #fff;
+          font-variant-numeric: tabular-nums;
+          min-width: 16px;
+          text-align: right;
+          font-weight: 500;
+        }
+
         .controls {
           position: absolute;
           bottom: 0;
@@ -622,7 +752,7 @@ export default function SachinGlobe() {
           gap: 6px;
           flex-wrap: wrap;
           justify-content: center;
-          margin-bottom: 14px;
+          margin-bottom: 10px;
         }
         .chip {
           background: rgba(255, 255, 255, 0.06);
@@ -646,6 +776,40 @@ export default function SachinGlobe() {
           color: #060a18;
           border-color: #4ecdc4;
           font-weight: 500;
+        }
+
+        /* Country filter */
+        .country-row {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 10px;
+        }
+        .country-select {
+          background: rgba(255, 255, 255, 0.06);
+          border: 0.5px solid rgba(255, 255, 255, 0.18);
+          color: #fff;
+          padding: 6px 28px 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          cursor: pointer;
+          font-family: inherit;
+          outline: none;
+          appearance: none;
+          -webkit-appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
+          transition: all 0.18s;
+          min-width: 160px;
+          text-align: center;
+        }
+        .country-select:hover {
+          background-color: rgba(78, 205, 196, 0.12);
+          border-color: rgba(78, 205, 196, 0.4);
+        }
+        .country-select option {
+          background: #0e1628;
+          color: #fff;
         }
 
         .timeline {
@@ -722,33 +886,6 @@ export default function SachinGlobe() {
           cursor: pointer;
           border: none;
           box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.15);
-        }
-
-        .legend {
-          position: absolute;
-          top: 110px;
-          left: 22px;
-          z-index: 5;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          font-size: 11px;
-          color: #8892a6;
-          opacity: 0;
-          transition: opacity 0.8s;
-        }
-        .legend.visible {
-          opacity: 0.85;
-        }
-        .legend-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
         }
 
         .share-btn {
@@ -832,13 +969,18 @@ export default function SachinGlobe() {
             left: 16px;
             top: 80px;
           }
-          .legend {
+          .left-panel {
             top: auto;
-            bottom: 150px;
+            bottom: 195px;
             left: 16px;
+          }
+          .legend {
             flex-direction: row;
             gap: 12px;
             font-size: 10px;
+          }
+          .stats-panel {
+            display: none;
           }
           .controls {
             padding: 10px 12px 16px;
@@ -852,7 +994,7 @@ export default function SachinGlobe() {
             min-width: 50px;
           }
           .intro {
-            bottom: 170px;
+            bottom: 200px;
             font-size: 15px;
           }
           .share-btn {
