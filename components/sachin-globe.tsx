@@ -250,9 +250,24 @@ export default function SachinGlobe() {
   }
 
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const country = e.target.value
     handleUserInteract()
-    setSelectedCountry(e.target.value)
+    setSelectedCountry(country)
     setSelectedCentury(null)
+
+    if (!globeRef.current) return
+
+    if (country === "all") {
+      globeRef.current.controls().autoRotate = true
+      globeRef.current.pointOfView({ lat: 20, lng: 75, altitude: 2.3 }, 1200)
+    } else {
+      const pts = centuries.filter((c) => c.country === country)
+      if (pts.length === 0) return
+      const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length
+      const lng = pts.reduce((s, c) => s + c.lon, 0) / pts.length
+      globeRef.current.controls().autoRotate = false
+      globeRef.current.pointOfView({ lat, lng, altitude: 1.6 }, 1400)
+    }
   }
 
   const handleCardClose = () => {
@@ -293,12 +308,10 @@ export default function SachinGlobe() {
 
   return (
     <div className="app">
-      {/* Loading */}
       <div className={`loading ${!loading ? "hidden" : ""}`}>
         <div className="loading-dot" />
       </div>
 
-      {/* Header */}
       <div className="header">
         <div className="brand">
           <div className="title">100</div>
@@ -310,7 +323,6 @@ export default function SachinGlobe() {
         </div>
       </div>
 
-      {/* Share Button */}
       <button className={`share-btn ${showControls ? "visible" : ""}`} onClick={handleShare} title="Share this page">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="18" cy="5" r="3" />
@@ -322,7 +334,6 @@ export default function SachinGlobe() {
         Share
       </button>
 
-      {/* Legend + Stats Panel */}
       <div className={`left-panel ${showControls ? "visible" : ""}`}>
         <div className="legend">
           <div className="legend-item">
@@ -339,667 +350,157 @@ export default function SachinGlobe() {
           </div>
         </div>
 
-        {/* Test / ODI breakdown bar chart */}
         <div className="stats-panel">
           <div className="stats-title">Format breakdown</div>
           <div className="stats-row">
             <span className="stats-label">Test</span>
             <div className="stats-bar-wrap">
-              <div
-                className="stats-bar"
-                style={{ width: `${(stats.test / maxBar) * 100}%`, background: "#4ecdc4" }}
-              />
+              <div className="stats-bar" style={{ width: `${(stats.test / maxBar) * 100}%`, background: "#4ecdc4" }} />
             </div>
             <span className="stats-num">{stats.test}</span>
           </div>
           <div className="stats-row">
             <span className="stats-label">ODI</span>
             <div className="stats-bar-wrap">
-              <div
-                className="stats-bar"
-                style={{ width: `${(stats.odi / maxBar) * 100}%`, background: "#ffd166" }}
-              />
+              <div className="stats-bar" style={{ width: `${(stats.odi / maxBar) * 100}%`, background: "#ffd166" }} />
             </div>
             <span className="stats-num">{stats.odi}</span>
           </div>
         </div>
       </div>
 
-      {/* Card */}
       {selectedCentury && (
         <div className="card visible">
-          <div className="card-close" onClick={handleCardClose}>
-            x
-          </div>
+          <div className="card-close" onClick={handleCardClose}>x</div>
           <div className="card-num">#{selectedCentury.n}</div>
           <div className="card-score">{fmtScore(selectedCentury)}</div>
           <div className="card-rows">
-            <div className="card-row">
-              <span className="card-label">vs</span>
-              <span className="card-value">{selectedCentury.opponent}</span>
-            </div>
-            <div className="card-row">
-              <span className="card-label">At</span>
-              <span className="card-value">{selectedCentury.ground}</span>
-            </div>
-            <div className="card-row">
-              <span className="card-label">Country</span>
-              <span className="card-value">{selectedCentury.country}</span>
-            </div>
-            <div className="card-row">
-              <span className="card-label">Format</span>
-              <span className="card-value">{selectedCentury.format}</span>
-            </div>
-            <div className="card-row">
-              <span className="card-label">Date</span>
-              <span className="card-value">{fmtDate(selectedCentury.date)}</span>
-            </div>
-            <div className="card-row">
-              <span className="card-label">Venue</span>
-              <span className="card-value">{selectedCentury.venueType}</span>
-            </div>
+            <div className="card-row"><span className="card-label">vs</span><span className="card-value">{selectedCentury.opponent}</span></div>
+            <div className="card-row"><span className="card-label">At</span><span className="card-value">{selectedCentury.ground}</span></div>
+            <div className="card-row"><span className="card-label">Country</span><span className="card-value">{selectedCentury.country}</span></div>
+            <div className="card-row"><span className="card-label">Format</span><span className="card-value">{selectedCentury.format}</span></div>
+            <div className="card-row"><span className="card-label">Date</span><span className="card-value">{fmtDate(selectedCentury.date)}</span></div>
+            <div className="card-row"><span className="card-label">Venue</span><span className="card-value">{selectedCentury.venueType}</span></div>
           </div>
         </div>
       )}
 
-      {/* Globe Container */}
-      <div
-        ref={containerRef}
-        className="globe-container"
-        onPointerDown={handleUserInteract}
-        onWheel={handleUserInteract}
-      />
+      <div ref={containerRef} className="globe-container" onPointerDown={handleUserInteract} onWheel={handleUserInteract} />
 
-      {/* Intro */}
       <div className={`intro ${showIntro ? "visible" : ""}`}>
         <div>{introText}</div>
         <div className="intro-sub">watch them accumulate</div>
       </div>
 
-      {/* Controls */}
       <div className={`controls ${showControls ? "visible" : ""}`}>
         <div className="chips">
           {chips.map((chip) => (
-            <button
-              key={chip.filter}
-              className={`chip ${currentFilter === chip.filter ? "active" : ""}`}
-              onClick={() => handleChipClick(chip.filter)}
-            >
+            <button key={chip.filter} className={`chip ${currentFilter === chip.filter ? "active" : ""}`} onClick={() => handleChipClick(chip.filter)}>
               {chip.label}
             </button>
           ))}
         </div>
 
-        {/* Country filter */}
         <div className="country-row">
-          <select
-            className="country-select"
-            value={selectedCountry}
-            onChange={handleCountryChange}
-          >
+          <select className="country-select" value={selectedCountry} onChange={handleCountryChange}>
             <option value="all">All Countries</option>
-            {countryList.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {countryList.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
 
         <div className="timeline">
           <button className="play-btn" onClick={handlePlayClick} title="Replay timeline">
             {playing ? (
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" />
-                <rect x="14" y="4" width="4" height="16" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
             ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="6,4 20,12 6,20" />
-              </svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
             )}
           </button>
           <div className="year-display">{currentYear}</div>
           <div className="slider-wrap">
-            <input
-              type="range"
-              className="slider"
-              min="1990"
-              max="2012"
-              value={currentYear}
-              step="1"
-              onChange={handleSliderChange}
-            />
+            <input type="range" className="slider" min="1990" max="2012" value={currentYear} step="1" onChange={handleSliderChange} />
           </div>
         </div>
       </div>
 
       <style jsx>{`
-        * {
-          box-sizing: border-box;
-        }
-        .app {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          background: #060a18;
-          color: #fff;
-          font-family: "Inter", system-ui, sans-serif;
-          overflow: hidden;
-        }
-
-        .header {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 10;
-          padding: 18px 22px;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          pointer-events: none;
-        }
-        .brand {
-          pointer-events: auto;
-        }
-        .title {
-          font-family: "Fraunces", serif;
-          font-size: 30px;
-          font-weight: 500;
-          line-height: 1;
-          letter-spacing: -0.01em;
-        }
-        .subtitle {
-          font-size: 11px;
-          color: #8892a6;
-          margin-top: 6px;
-          max-width: 200px;
-          line-height: 1.4;
-        }
-        .counter-wrap {
-          text-align: right;
-          pointer-events: none;
-        }
-        .counter {
-          font-family: "Fraunces", serif;
-          font-size: 36px;
-          font-weight: 500;
-          line-height: 1;
-          font-variant-numeric: tabular-nums;
-          color: #fff;
-          transition: color 0.3s;
-        }
-        .counter.playing {
-          color: #4ecdc4;
-        }
-        .counter-label {
-          font-size: 9px;
-          color: #8892a6;
-          margin-top: 4px;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-        }
-
-        .globe-container {
-          flex: 1;
-          width: 100%;
-        }
-
-        .intro {
-          position: absolute;
-          bottom: 160px;
-          left: 50%;
-          transform: translateX(-50%);
-          font-family: "Fraunces", serif;
-          font-size: 18px;
-          color: #fff;
-          letter-spacing: 0.02em;
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 0.6s;
-          text-align: center;
-          white-space: nowrap;
-          z-index: 5;
-        }
-        .intro.visible {
-          opacity: 0.95;
-        }
-        .intro-sub {
-          font-family: "Inter", sans-serif;
-          font-size: 10px;
-          color: #8892a6;
-          margin-top: 5px;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          font-weight: 400;
-        }
-
-        .card {
-          position: absolute;
-          top: 90px;
-          right: 18px;
-          width: 260px;
-          background: rgba(10, 14, 26, 0.94);
-          border: 0.5px solid rgba(78, 205, 196, 0.35);
-          border-radius: 12px;
-          padding: 16px 18px;
-          z-index: 20;
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          opacity: 0;
-          transform: translateY(-8px);
-          pointer-events: none;
-          transition: opacity 0.25s, transform 0.25s;
-        }
-        .card.visible {
-          opacity: 1;
-          transform: translateY(0);
-          pointer-events: auto;
-        }
-        .card-num {
-          font-family: "Fraunces", serif;
-          font-size: 26px;
-          color: #4ecdc4;
-          line-height: 1;
-          font-weight: 500;
-        }
-        .card-score {
-          font-size: 20px;
-          font-weight: 500;
-          margin-top: 6px;
-          letter-spacing: -0.01em;
-        }
-        .card-rows {
-          margin-top: 12px;
-        }
-        .card-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 5px 0;
-          border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
-          font-size: 12px;
-          gap: 12px;
-        }
-        .card-row:last-child {
-          border-bottom: none;
-        }
-        .card-label {
-          color: #8892a6;
-          flex-shrink: 0;
-        }
-        .card-value {
-          text-align: right;
-          font-weight: 500;
-        }
-        .card-close {
-          position: absolute;
-          top: 10px;
-          right: 12px;
-          color: #8892a6;
-          cursor: pointer;
-          font-size: 20px;
-          line-height: 1;
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: color 0.15s, background 0.15s;
-        }
-        .card-close:hover {
-          color: #fff;
-          background: rgba(255, 255, 255, 0.08);
-        }
-
-        /* Left panel: legend + stats */
-        .left-panel {
-          position: absolute;
-          top: 108px;
-          left: 22px;
-          z-index: 5;
-          opacity: 0;
-          transition: opacity 0.8s;
-        }
-        .left-panel.visible {
-          opacity: 1;
-        }
-
-        .legend {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          font-size: 11px;
-          color: #8892a6;
-        }
-        .legend-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-        .dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-
-        /* Stats bar chart */
-        .stats-panel {
-          margin-top: 16px;
-          width: 130px;
-        }
-        .stats-title {
-          font-size: 9px;
-          color: #8892a6;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          margin-bottom: 8px;
-        }
-        .stats-row {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 6px;
-        }
-        .stats-label {
-          font-size: 10px;
-          color: #8892a6;
-          width: 22px;
-          flex-shrink: 0;
-        }
-        .stats-bar-wrap {
-          flex: 1;
-          height: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 2px;
-          overflow: hidden;
-        }
-        .stats-bar {
-          height: 100%;
-          border-radius: 2px;
-          transition: width 0.4s ease;
-        }
-        .stats-num {
-          font-size: 10px;
-          color: #fff;
-          font-variant-numeric: tabular-nums;
-          min-width: 16px;
-          text-align: right;
-          font-weight: 500;
-        }
-
-        .controls {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 12px 16px 18px;
-          z-index: 10;
-          background: linear-gradient(to top, rgba(6, 10, 24, 0.98) 40%, transparent);
-          opacity: 0;
-          transform: translateY(10px);
-          transition: opacity 0.8s, transform 0.8s;
-        }
-        .controls.visible {
-          opacity: 1;
-          transform: translateY(0);
-        }
-        .chips {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-          justify-content: center;
-          margin-bottom: 10px;
-        }
-        .chip {
-          background: rgba(255, 255, 255, 0.06);
-          border: 0.5px solid rgba(255, 255, 255, 0.18);
-          color: #fff;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          cursor: pointer;
-          transition: all 0.18s;
-          font-family: inherit;
-          font-weight: 400;
-          white-space: nowrap;
-        }
-        .chip:hover {
-          background: rgba(78, 205, 196, 0.12);
-          border-color: rgba(78, 205, 196, 0.4);
-        }
-        .chip.active {
-          background: #4ecdc4;
-          color: #060a18;
-          border-color: #4ecdc4;
-          font-weight: 500;
-        }
-
-        /* Country filter */
-        .country-row {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 10px;
-        }
-        .country-select {
-          background: rgba(255, 255, 255, 0.06);
-          border: 0.5px solid rgba(255, 255, 255, 0.18);
-          color: #fff;
-          padding: 6px 28px 6px 12px;
-          border-radius: 20px;
-          font-size: 12px;
-          cursor: pointer;
-          font-family: inherit;
-          outline: none;
-          appearance: none;
-          -webkit-appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 10px center;
-          transition: all 0.18s;
-          min-width: 160px;
-          text-align: center;
-        }
-        .country-select:hover {
-          background-color: rgba(78, 205, 196, 0.12);
-          border-color: rgba(78, 205, 196, 0.4);
-        }
-        .country-select option {
-          background: #0e1628;
-          color: #fff;
-        }
-
-        .timeline {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          max-width: 520px;
-          margin: 0 auto;
-        }
-        .play-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: rgba(78, 205, 196, 0.15);
-          border: 0.5px solid rgba(78, 205, 196, 0.5);
-          color: #4ecdc4;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-          padding: 0;
-          transition: background 0.15s;
-        }
-        .play-btn:hover {
-          background: rgba(78, 205, 196, 0.25);
-        }
-        .play-btn svg {
-          width: 12px;
-          height: 12px;
-        }
-        .year-display {
-          font-family: "Fraunces", serif;
-          font-size: 20px;
-          font-weight: 500;
-          color: #fff;
-          min-width: 60px;
-          text-align: center;
-          font-variant-numeric: tabular-nums;
-        }
-        .slider-wrap {
-          flex: 1;
-          position: relative;
-          height: 28px;
-          display: flex;
-          align-items: center;
-        }
-        .slider {
-          width: 100%;
-          appearance: none;
-          -webkit-appearance: none;
-          height: 2px;
-          background: rgba(255, 255, 255, 0.18);
-          border-radius: 2px;
-          outline: none;
-          margin: 0;
-        }
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          -webkit-appearance: none;
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #4ecdc4;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.15);
-        }
-        .slider::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
-          background: #4ecdc4;
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.15);
-        }
-
-        .share-btn {
-          position: absolute;
-          top: 22px;
-          right: 120px;
-          z-index: 10;
-          background: rgba(255, 255, 255, 0.06);
-          border: 0.5px solid rgba(255, 255, 255, 0.15);
-          color: #fff;
-          padding: 6px 10px;
-          border-radius: 18px;
-          font-size: 11px;
-          cursor: pointer;
-          font-family: inherit;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          opacity: 0;
-          transition: opacity 0.8s, background 0.15s, border-color 0.15s;
-        }
-        .share-btn.visible {
-          opacity: 0.85;
-        }
-        .share-btn:hover {
-          opacity: 1;
-          background: rgba(78, 205, 196, 0.15);
-          border-color: rgba(78, 205, 196, 0.4);
-        }
-
-        .loading {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #060a18;
-          z-index: 100;
-          transition: opacity 0.6s;
-        }
-        .loading.hidden {
-          opacity: 0;
-          pointer-events: none;
-        }
-        .loading-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: #4ecdc4;
-          animation: pulse 1.3s ease-in-out infinite;
-        }
-        @keyframes pulse {
-          0%,
-          100% {
-            opacity: 0.3;
-            transform: scale(0.8);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-
+        * { box-sizing: border-box; }
+        .app { position: fixed; inset: 0; display: flex; flex-direction: column; background: #060a18; color: #fff; font-family: "Inter", system-ui, sans-serif; overflow: hidden; }
+        .header { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 18px 22px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+        .brand { pointer-events: auto; }
+        .title { font-family: "Fraunces", serif; font-size: 30px; font-weight: 500; line-height: 1; letter-spacing: -0.01em; }
+        .subtitle { font-size: 11px; color: #8892a6; margin-top: 6px; max-width: 200px; line-height: 1.4; }
+        .counter-wrap { text-align: right; pointer-events: none; }
+        .counter { font-family: "Fraunces", serif; font-size: 36px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; color: #fff; transition: color 0.3s; }
+        .counter.playing { color: #4ecdc4; }
+        .counter-label { font-size: 9px; color: #8892a6; margin-top: 4px; letter-spacing: 0.15em; text-transform: uppercase; }
+        .globe-container { flex: 1; width: 100%; }
+        .intro { position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); font-family: "Fraunces", serif; font-size: 18px; color: #fff; letter-spacing: 0.02em; pointer-events: none; opacity: 0; transition: opacity 0.6s; text-align: center; white-space: nowrap; z-index: 5; }
+        .intro.visible { opacity: 0.95; }
+        .intro-sub { font-family: "Inter", sans-serif; font-size: 10px; color: #8892a6; margin-top: 5px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 400; }
+        .card { position: absolute; top: 90px; right: 18px; width: 260px; background: rgba(10,14,26,0.94); border: 0.5px solid rgba(78,205,196,0.35); border-radius: 12px; padding: 16px 18px; z-index: 20; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
+        .card.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .card-num { font-family: "Fraunces", serif; font-size: 26px; color: #4ecdc4; line-height: 1; font-weight: 500; }
+        .card-score { font-size: 20px; font-weight: 500; margin-top: 6px; letter-spacing: -0.01em; }
+        .card-rows { margin-top: 12px; }
+        .card-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 12px; gap: 12px; }
+        .card-row:last-child { border-bottom: none; }
+        .card-label { color: #8892a6; flex-shrink: 0; }
+        .card-value { text-align: right; font-weight: 500; }
+        .card-close { position: absolute; top: 10px; right: 12px; color: #8892a6; cursor: pointer; font-size: 20px; line-height: 1; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.15s, background 0.15s; }
+        .card-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+        .left-panel { position: absolute; top: 108px; left: 22px; z-index: 5; opacity: 0; transition: opacity 0.8s; }
+        .left-panel.visible { opacity: 1; }
+        .legend { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #8892a6; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .stats-panel { margin-top: 16px; width: 130px; }
+        .stats-title { font-size: 9px; color: #8892a6; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+        .stats-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .stats-label { font-size: 10px; color: #8892a6; width: 22px; flex-shrink: 0; }
+        .stats-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .stats-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+        .stats-num { font-size: 10px; color: #fff; font-variant-numeric: tabular-nums; min-width: 16px; text-align: right; font-weight: 500; }
+        .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px 18px; z-index: 10; background: linear-gradient(to top, rgba(6,10,24,0.98) 40%, transparent); opacity: 0; transform: translateY(10px); transition: opacity 0.8s, transform 0.8s; }
+        .controls.visible { opacity: 1; transform: translateY(0); }
+        .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
+        .chip { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.18s; font-family: inherit; font-weight: 400; white-space: nowrap; }
+        .chip:hover { background: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
+        .chip.active { background: #4ecdc4; color: #060a18; border-color: #4ecdc4; font-weight: 500; }
+        .country-row { display: flex; justify-content: center; margin-bottom: 10px; }
+        .country-select { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #fff; padding: 6px 28px 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; font-family: inherit; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: all 0.18s; min-width: 160px; text-align: center; }
+        .country-select:hover { background-color: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
+        .country-select option { background: #0e1628; color: #fff; }
+        .timeline { display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto; }
+        .play-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(78,205,196,0.15); border: 0.5px solid rgba(78,205,196,0.5); color: #4ecdc4; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; transition: background 0.15s; }
+        .play-btn:hover { background: rgba(78,205,196,0.25); }
+        .play-btn svg { width: 12px; height: 12px; }
+        .year-display { font-family: "Fraunces", serif; font-size: 20px; font-weight: 500; color: #fff; min-width: 60px; text-align: center; font-variant-numeric: tabular-nums; }
+        .slider-wrap { flex: 1; position: relative; height: 28px; display: flex; align-items: center; }
+        .slider { width: 100%; appearance: none; -webkit-appearance: none; height: 2px; background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; margin: 0; }
+        .slider::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
+        .slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
+        .share-btn { position: absolute; top: 22px; right: 120px; z-index: 10; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 18px; font-size: 11px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; opacity: 0; transition: opacity 0.8s, background 0.15s, border-color 0.15s; }
+        .share-btn.visible { opacity: 0.85; }
+        .share-btn:hover { opacity: 1; background: rgba(78,205,196,0.15); border-color: rgba(78,205,196,0.4); }
+        .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #060a18; z-index: 100; transition: opacity 0.6s; }
+        .loading.hidden { opacity: 0; pointer-events: none; }
+        .loading-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ecdc4; animation: pulse 1.3s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
         @media (max-width: 640px) {
-          .header {
-            padding: 14px 16px;
-          }
-          .title {
-            font-size: 24px;
-          }
-          .subtitle {
-            font-size: 10px;
-            max-width: 150px;
-          }
-          .counter {
-            font-size: 28px;
-          }
-          .card {
-            width: calc(100% - 32px);
-            right: 16px;
-            left: 16px;
-            top: 80px;
-          }
-          .left-panel {
-            top: auto;
-            bottom: 195px;
-            left: 16px;
-          }
-          .legend {
-            flex-direction: row;
-            gap: 12px;
-            font-size: 10px;
-          }
-          .stats-panel {
-            display: none;
-          }
-          .controls {
-            padding: 10px 12px 16px;
-          }
-          .chip {
-            font-size: 11px;
-            padding: 5px 10px;
-          }
-          .year-display {
-            font-size: 17px;
-            min-width: 50px;
-          }
-          .intro {
-            bottom: 200px;
-            font-size: 15px;
-          }
-          .share-btn {
-            display: none;
-          }
+          .header { padding: 14px 16px; }
+          .title { font-size: 24px; }
+          .subtitle { font-size: 10px; max-width: 150px; }
+          .counter { font-size: 28px; }
+          .card { width: calc(100% - 32px); right: 16px; left: 16px; top: 80px; }
+          .left-panel { top: auto; bottom: 195px; left: 16px; }
+          .legend { flex-direction: row; gap: 12px; font-size: 10px; }
+          .stats-panel { display: none; }
+          .controls { padding: 10px 12px 16px; }
+          .chip { font-size: 11px; padding: 5px 10px; }
+          .year-display { font-size: 17px; min-width: 50px; }
+          .intro { bottom: 200px; font-size: 15px; }
+          .share-btn { display: none; }
         }
       `}</style>
     </div>
