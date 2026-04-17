@@ -124,8 +124,7 @@ export default function SachinGlobe() {
     function arcFn(i: number, points: number[][]) {
       if (points.length) points.pop()
       const arr = topology.arcs[i < 0 ? ~i : i]
-      let x = 0,
-        y = 0
+      let x = 0, y = 0
       const res = arr.map((p: number[]) => [(x += p[0]), (y += p[1])])
       if (i < 0) res.reverse()
       res.forEach((p: number[]) =>
@@ -272,9 +271,7 @@ export default function SachinGlobe() {
 
   const handleCardClose = () => {
     setSelectedCentury(null)
-    if (globeRef.current) {
-      globeRef.current.pointOfView({ altitude: 2.3 }, 1000)
-    }
+    if (globeRef.current) globeRef.current.pointOfView({ altitude: 2.3 }, 1000)
     if (idleRef.current) clearTimeout(idleRef.current)
     idleRef.current = setTimeout(() => {
       if (globeRef.current) globeRef.current.controls().autoRotate = true
@@ -285,13 +282,9 @@ export default function SachinGlobe() {
     const url = window.location.href
     const shareData = { title: "Chasing Sachin — 100 international centuries", text: "Every international century Sachin ever scored.", url }
     if (navigator.share) {
-      try {
-        await navigator.share(shareData)
-      } catch {}
+      try { await navigator.share(shareData) } catch {}
     } else {
-      try {
-        await navigator.clipboard.writeText(url)
-      } catch {}
+      try { await navigator.clipboard.writeText(url) } catch {}
     }
   }
 
@@ -305,6 +298,7 @@ export default function SachinGlobe() {
   ]
 
   const maxBar = Math.max(stats.test, stats.odi, 1)
+  const statsLabel = selectedCountry === "all" ? "All countries" : selectedCountry
 
   return (
     <div className="app">
@@ -336,22 +330,13 @@ export default function SachinGlobe() {
 
       <div className={`left-panel ${showControls ? "visible" : ""}`}>
         <div className="legend">
-          <div className="legend-item">
-            <span className="dot" style={{ background: "#ffd166" }} />
-            Home
-          </div>
-          <div className="legend-item">
-            <span className="dot" style={{ background: "#4ecdc4" }} />
-            Away
-          </div>
-          <div className="legend-item">
-            <span className="dot" style={{ background: "#c9c9c9" }} />
-            Neutral
-          </div>
+          <div className="legend-item"><span className="dot" style={{ background: "#ffd166" }} />Home</div>
+          <div className="legend-item"><span className="dot" style={{ background: "#4ecdc4" }} />Away</div>
+          <div className="legend-item"><span className="dot" style={{ background: "#c9c9c9" }} />Neutral</div>
         </div>
 
         <div className="stats-panel">
-          <div className="stats-title">Format breakdown</div>
+          <div className="stats-title">{statsLabel}</div>
           <div className="stats-row">
             <span className="stats-label">Test</span>
             <div className="stats-bar-wrap">
@@ -371,7 +356,7 @@ export default function SachinGlobe() {
 
       {selectedCentury && (
         <div className="card visible">
-          <div className="card-close" onClick={handleCardClose}>x</div>
+          <button className="card-close" onClick={handleCardClose} aria-label="Close">×</button>
           <div className="card-num">#{selectedCentury.n}</div>
           <div className="card-score">{fmtScore(selectedCentury)}</div>
           <div className="card-rows">
@@ -410,11 +395,10 @@ export default function SachinGlobe() {
 
         <div className="timeline">
           <button className="play-btn" onClick={handlePlayClick} title="Replay timeline">
-            {playing ? (
-              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
-            ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
-            )}
+            {playing
+              ? <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+              : <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
+            }
           </button>
           <div className="year-display">{currentYear}</div>
           <div className="slider-wrap">
@@ -447,20 +431,20 @@ export default function SachinGlobe() {
         .card-row:last-child { border-bottom: none; }
         .card-label { color: #8892a6; flex-shrink: 0; }
         .card-value { text-align: right; font-weight: 500; }
-        .card-close { position: absolute; top: 10px; right: 12px; color: #8892a6; cursor: pointer; font-size: 20px; line-height: 1; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.15s, background 0.15s; }
+        .card-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #8892a6; cursor: pointer; font-size: 22px; line-height: 1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.15s, background 0.15s; padding: 0; }
         .card-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
         .left-panel { position: absolute; top: 108px; left: 22px; z-index: 5; opacity: 0; transition: opacity 0.8s; }
         .left-panel.visible { opacity: 1; }
-        .legend { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: #8892a6; }
+        .legend { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: #8892a6; }
         .legend-item { display: flex; align-items: center; gap: 8px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .stats-panel { margin-top: 16px; width: 130px; }
-        .stats-title { font-size: 9px; color: #8892a6; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
-        .stats-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-        .stats-label { font-size: 10px; color: #8892a6; width: 22px; flex-shrink: 0; }
-        .stats-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        .stats-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
-        .stats-num { font-size: 10px; color: #fff; font-variant-numeric: tabular-nums; min-width: 16px; text-align: right; font-weight: 500; }
+        .stats-panel { margin-top: 18px; width: 160px; }
+        .stats-title { font-size: 11px; color: #4ecdc4; font-weight: 500; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .stats-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .stats-label { font-size: 12px; color: #8892a6; width: 26px; flex-shrink: 0; }
+        .stats-bar-wrap { flex: 1; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
+        .stats-bar { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
+        .stats-num { font-size: 12px; color: #fff; font-variant-numeric: tabular-nums; min-width: 20px; text-align: right; font-weight: 600; }
         .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px 18px; z-index: 10; background: linear-gradient(to top, rgba(6,10,24,0.98) 40%, transparent); opacity: 0; transform: translateY(10px); transition: opacity 0.8s, transform 0.8s; }
         .controls.visible { opacity: 1; transform: translateY(0); }
         .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
