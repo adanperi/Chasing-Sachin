@@ -20,11 +20,6 @@ export const metadata: Metadata = {
     title: '100 — Sachin Tendulkar\'s international centuries',
     description: 'Every international century Sachin ever scored. On a rotating globe.',
   },
-}
-
-export const viewport: Viewport = {
-  themeColor: '#060a18',
-}
   icons: {
     icon: [
       {
@@ -42,6 +37,10 @@ export const viewport: Viewport = {
     ],
     apple: '/apple-icon.png',
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#060a18',
 }
 
 export default function RootLayout({
