@@ -159,6 +159,16 @@ export default function SachinGlobe() {
     return Array.from(seen).sort()
   }, [centuries])
 
+  const countryData = useMemo(() => {
+    return countryList.map((country) => {
+      let pts = centuries.filter((c) => c.country === country && c.year <= currentYear)
+      if (currentFilter === "Test" || currentFilter === "ODI") pts = pts.filter((c) => c.format === currentFilter)
+      else if (currentFilter === "Home" || currentFilter === "Away" || currentFilter === "Neutral")
+        pts = pts.filter((c) => c.venueType === currentFilter)
+      return { country, count: pts.length }
+    }).filter((d) => d.count > 0).sort((a, b) => b.count - a.count)
+  }, [centuries, countryList, currentYear, currentFilter])
+
   const stats = useMemo(() => {
     let data = centuries
     if (currentFilter === "Test" || currentFilter === "ODI") data = data.filter((c) => c.format === currentFilter)
@@ -248,14 +258,11 @@ export default function SachinGlobe() {
     setSelectedCentury(null)
   }
 
-  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const country = e.target.value
+  const selectCountry = useCallback((country: string) => {
     handleUserInteract()
     setSelectedCountry(country)
     setSelectedCentury(null)
-
     if (!globeRef.current) return
-
     if (country === "all") {
       globeRef.current.controls().autoRotate = true
       globeRef.current.pointOfView({ lat: 20, lng: 75, altitude: 2.3 }, 1200)
@@ -267,7 +274,7 @@ export default function SachinGlobe() {
       globeRef.current.controls().autoRotate = false
       globeRef.current.pointOfView({ lat, lng, altitude: 1.6 }, 1400)
     }
-  }
+  }, [centuries, handleUserInteract])
 
   const handleCardClose = () => {
     setSelectedCentury(null)
@@ -354,6 +361,19 @@ export default function SachinGlobe() {
         </div>
       </div>
 
+      <div className={`country-panel ${showControls && !selectedCentury ? "visible" : ""}`}>
+        <div className={`country-item ${selectedCountry === "all" ? "active" : ""}`} onClick={() => selectCountry("all")}>
+          <span className="country-name">All</span>
+          <span className="country-count">{stats.total}</span>
+        </div>
+        {countryData.map((d) => (
+          <div key={d.country} className={`country-item ${selectedCountry === d.country ? "active" : ""}`} onClick={() => selectCountry(d.country)}>
+            <span className="country-name">{d.country}</span>
+            <span className="country-count">{d.count}</span>
+          </div>
+        ))}
+      </div>
+
       {selectedCentury && (
         <div className="card visible">
           <button className="card-close" onClick={handleCardClose} aria-label="Close">×</button>
@@ -386,13 +406,6 @@ export default function SachinGlobe() {
           ))}
         </div>
 
-        <div className="country-row">
-          <select className="country-select" value={selectedCountry} onChange={handleCountryChange}>
-            <option value="all">All Countries</option>
-            {countryList.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-
         <div className="timeline">
           <button className="play-btn" onClick={handlePlayClick} title="Replay timeline">
             {playing
@@ -400,10 +413,11 @@ export default function SachinGlobe() {
               : <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
             }
           </button>
-          <div className="year-display">{currentYear}</div>
+          <span className="year-label">1990</span>
           <div className="slider-wrap">
             <input type="range" className="slider" min="1990" max="2012" value={currentYear} step="1" onChange={handleSliderChange} />
           </div>
+          <span className="year-label">2012</span>
         </div>
       </div>
 
@@ -451,15 +465,22 @@ export default function SachinGlobe() {
         .chip { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.18s; font-family: inherit; font-weight: 400; white-space: nowrap; }
         .chip:hover { background: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
         .chip.active { background: #4ecdc4; color: #060a18; border-color: #4ecdc4; font-weight: 500; }
-        .country-row { display: flex; justify-content: center; margin-bottom: 10px; }
-        .country-select { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #fff; padding: 6px 28px 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; font-family: inherit; outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238892a6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: all 0.18s; min-width: 160px; text-align: center; }
-        .country-select:hover { background-color: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
-        .country-select option { background: #0e1628; color: #fff; }
+        .country-panel { position: absolute; top: 90px; right: 18px; z-index: 15; width: 150px; max-height: calc(100vh - 200px); overflow-y: auto; background: rgba(10,14,26,0.88); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px; opacity: 0; pointer-events: none; transition: opacity 0.4s; scrollbar-width: thin; scrollbar-color: rgba(78,205,196,0.3) transparent; }
+        .country-panel.visible { opacity: 1; pointer-events: auto; }
+        .country-panel::-webkit-scrollbar { width: 3px; }
+        .country-panel::-webkit-scrollbar-thumb { background: rgba(78,205,196,0.3); border-radius: 2px; }
+        .country-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; gap: 8px; }
+        .country-item:hover { background: rgba(78,205,196,0.1); }
+        .country-item.active { background: rgba(78,205,196,0.18); }
+        .country-name { font-size: 12px; color: #c8d2e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        .country-item.active .country-name { color: #4ecdc4; font-weight: 500; }
+        .country-count { font-size: 11px; color: #8892a6; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .country-item.active .country-count { color: #4ecdc4; }
         .timeline { display: flex; align-items: center; gap: 10px; max-width: 520px; margin: 0 auto; }
         .play-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(78,205,196,0.15); border: 0.5px solid rgba(78,205,196,0.5); color: #4ecdc4; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; transition: background 0.15s; }
         .play-btn:hover { background: rgba(78,205,196,0.25); }
         .play-btn svg { width: 12px; height: 12px; }
-        .year-display { font-family: "Fraunces", serif; font-size: 20px; font-weight: 500; color: #fff; min-width: 60px; text-align: center; font-variant-numeric: tabular-nums; }
+        .year-label { font-size: 12px; color: #8892a6; font-variant-numeric: tabular-nums; flex-shrink: 0; }
         .slider-wrap { flex: 1; position: relative; height: 28px; display: flex; align-items: center; }
         .slider { width: 100%; appearance: none; -webkit-appearance: none; height: 2px; background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; margin: 0; }
         .slider::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
@@ -480,9 +501,9 @@ export default function SachinGlobe() {
           .left-panel { top: auto; bottom: 195px; left: 16px; }
           .legend { flex-direction: row; gap: 12px; font-size: 10px; }
           .stats-panel { display: none; }
+          .country-panel { display: none; }
           .controls { padding: 10px 12px 16px; }
           .chip { font-size: 11px; padding: 5px 10px; }
-          .year-display { font-size: 17px; min-width: 50px; }
           .intro { bottom: 200px; font-size: 15px; }
           .share-btn { display: none; }
         }
