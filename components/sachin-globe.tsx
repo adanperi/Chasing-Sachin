@@ -302,13 +302,25 @@ export default function SachinGlobe() {
     }
   }
 
+  const chipCounts = useMemo(() => {
+    const byYear = centuries.filter((c) => c.year <= currentYear)
+    return {
+      all: byYear.length,
+      Test: byYear.filter((c) => c.format === "Test").length,
+      ODI: byYear.filter((c) => c.format === "ODI").length,
+      Home: byYear.filter((c) => c.venueType === "Home").length,
+      Away: byYear.filter((c) => c.venueType === "Away").length,
+      Neutral: byYear.filter((c) => c.venueType === "Neutral").length,
+    }
+  }, [centuries, currentYear])
+
   const chips = [
-    { filter: "all", label: "All 100" },
-    { filter: "Test", label: "Test (51)" },
-    { filter: "ODI", label: "ODI (49)" },
-    { filter: "Home", label: "Home (42)" },
-    { filter: "Away", label: "Away (40)" },
-    { filter: "Neutral", label: "Neutral (18)" },
+    { filter: "all", label: `All ${chipCounts.all}` },
+    { filter: "Test", label: `Test (${chipCounts.Test})` },
+    { filter: "ODI", label: `ODI (${chipCounts.ODI})` },
+    { filter: "Home", label: `Home (${chipCounts.Home})` },
+    { filter: "Away", label: `Away (${chipCounts.Away})` },
+    { filter: "Neutral", label: `Neutral (${chipCounts.Neutral})` },
   ]
 
   const maxBar = Math.max(stats.test, stats.odi, 1)
