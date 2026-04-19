@@ -451,6 +451,7 @@ export default function SachinGlobe() {
             <div className="year-bubble" style={{ left: `calc(${((currentYear - 1990) / 22) * 100}% - 20px)` }}>{currentYear}</div>
           </div>
           <span className="year-label">2012</span>
+          <button className="reset-btn" onClick={() => { handleUserInteract(); setCurrentYear(2012) }} title="Reset to 2012">↺</button>
         </div>
       </div>
 
@@ -535,6 +536,8 @@ export default function SachinGlobe() {
         .slider { width: 100%; appearance: none; -webkit-appearance: none; height: 2px; background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; margin: 0; }
         .slider::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
         .slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
+       .reset-btn { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #8892a6; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0; transition: all 0.15s; font-family: inherit; }
+.reset-btn:hover { background: rgba(78,205,196,0.15); border-color: rgba(78,205,196,0.4); color: #4ecdc4; }
         .year-bubble { position: absolute; top: -30px; background: #4ecdc4; color: #060a18; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; pointer-events: none; white-space: nowrap; }
         .share-btn { position: absolute; top: 22px; right: 120px; z-index: 10; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 18px; font-size: 11px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; opacity: 0; transition: opacity 0.8s, background 0.15s, border-color 0.15s; }
         .share-btn.visible { opacity: 0.85; }
