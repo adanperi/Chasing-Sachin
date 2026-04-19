@@ -82,7 +82,7 @@ export default function SachinGlobe() {
           handleUserInteract()
           setSelectedCentury(century)
           setSelectedCountry(century.country)
-          globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 1.2 }, 1200)
+          globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 0.5 }, 1200)
         })(containerRef.current!)
 
       globeRef.current = globe
@@ -283,13 +283,13 @@ export default function SachinGlobe() {
       const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length
       const lng = pts.reduce((s, c) => s + c.lon, 0) / pts.length
       globeRef.current.controls().autoRotate = false
-      globeRef.current.pointOfView({ lat, lng, altitude: 1.6 }, 1400)
+      globeRef.current.pointOfView({ lat, lng, altitude: 1.2 }, 1400)
     }
   }, [centuries, handleUserInteract])
 
   const handleCardClose = () => {
     setSelectedCentury(null)
-    if (globeRef.current) globeRef.current.pointOfView({ altitude: 1.8 }, 800)
+    if (globeRef.current) globeRef.current.pointOfView({ altitude: 1.4 }, 800)
   }
 
   const handleShare = async () => {
@@ -412,7 +412,7 @@ export default function SachinGlobe() {
             {countryCenturies.map((c) => (
               <div key={c.n} className="century-item" onClick={() => {
                 setSelectedCentury(c)
-                globeRef.current?.pointOfView({ lat: c.lat, lng: c.lon, altitude: 1.2 }, 1200)
+                globeRef.current?.pointOfView({ lat: c.lat, lng: c.lon, altitude: 0.5 }, 1200)
               }}>
                 <span className="ci-num">#{c.n}</span>
                 <span className="ci-score">{fmtScore(c)}</span>
