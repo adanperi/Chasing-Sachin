@@ -81,6 +81,7 @@ export default function SachinGlobe() {
           const century = c as Century
           handleUserInteract()
           setSelectedCentury(century)
+          setSelectedCountry(century.country)
           globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 1.2 }, 1200)
         })(containerRef.current!)
 
@@ -168,6 +169,15 @@ export default function SachinGlobe() {
       return { country, count: pts.length }
     }).filter((d) => d.count > 0).sort((a, b) => b.count - a.count)
   }, [centuries, countryList, currentYear, currentFilter])
+
+  const countryCenturies = useMemo(() => {
+    if (selectedCountry === "all") return []
+    let data = centuries.filter((c) => c.country === selectedCountry && c.year <= currentYear)
+    if (currentFilter === "Test" || currentFilter === "ODI") data = data.filter((c) => c.format === currentFilter)
+    else if (currentFilter === "Home" || currentFilter === "Away" || currentFilter === "Neutral")
+      data = data.filter((c) => c.venueType === currentFilter)
+    return data.sort((a, b) => a.n - b.n)
+  }, [centuries, selectedCountry, currentFilter, currentYear])
 
   const stats = useMemo(() => {
     let data = centuries
@@ -278,11 +288,7 @@ export default function SachinGlobe() {
 
   const handleCardClose = () => {
     setSelectedCentury(null)
-    if (globeRef.current) globeRef.current.pointOfView({ altitude: 2.3 }, 1000)
-    if (idleRef.current) clearTimeout(idleRef.current)
-    idleRef.current = setTimeout(() => {
-      if (globeRef.current) globeRef.current.controls().autoRotate = true
-    }, 8000)
+    if (globeRef.current) globeRef.current.pointOfView({ altitude: 1.8 }, 800)
   }
 
   const handleShare = async () => {
@@ -316,7 +322,7 @@ export default function SachinGlobe() {
       <div className="header">
         <div className="brand">
           <div className="title">100</div>
-          <div className="subtitle">Sachin&apos;s international centuries, 1990 – 2012</div>
+          <div className="subtitle">Sachin&apos;s international centuries, 1990 – {currentYear}</div>
         </div>
         <div className="counter-wrap">
           <div className={`counter ${playing ? "playing" : ""}`}>{stats.total}</div>
@@ -360,34 +366,50 @@ export default function SachinGlobe() {
         </div>
       </div>
 
-      <div className={`country-panel ${showControls && !selectedCentury ? "visible" : ""}`}>
-        <div className={`country-item ${selectedCountry === "all" ? "active" : ""}`} onClick={() => selectCountry("all")}>
-          <span className="country-name">All</span>
-          <span className="country-count">{stats.total}</span>
-        </div>
-        {countryData.map((d) => (
-          <div key={d.country} className={`country-item ${selectedCountry === d.country ? "active" : ""}`} onClick={() => selectCountry(d.country)}>
-            <span className="country-name">{d.country}</span>
-            <span className="country-count">{d.count}</span>
-          </div>
-        ))}
+      <div className={`right-panel ${showControls ? "visible" : ""}`}>
+        {selectedCountry === "all" ? (
+          <>
+            <div className="rp-header">Countries</div>
+            {countryData.map((d) => (
+              <div key={d.country} className="country-item" onClick={() => selectCountry(d.country)}>
+                <span className="country-name">{d.country}</span>
+                <span className="country-count">{d.count}</span>
+              </div>
+            ))}
+          </>
+        ) : selectedCentury ? (
+          <>
+            <button className="rp-back" onClick={handleCardClose}>← {selectedCountry}</button>
+            <div className="rp-century-detail">
+              <div className="card-num">#{selectedCentury.n}</div>
+              <div className="card-score">{fmtScore(selectedCentury)}</div>
+              <div className="card-rows">
+                <div className="card-row"><span className="card-label">vs</span><span className="card-value">{selectedCentury.opponent}</span></div>
+                <div className="card-row"><span className="card-label">At</span><span className="card-value">{selectedCentury.ground}</span></div>
+                <div className="card-row"><span className="card-label">Format</span><span className="card-value">{selectedCentury.format}</span></div>
+                <div className="card-row"><span className="card-label">Date</span><span className="card-value">{fmtDate(selectedCentury.date)}</span></div>
+                <div className="card-row"><span className="card-label">Venue</span><span className="card-value">{selectedCentury.venueType}</span></div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <button className="rp-back" onClick={() => selectCountry("all")}>← All</button>
+            <div className="rp-header">{selectedCountry} · {countryCenturies.length}</div>
+            {countryCenturies.map((c) => (
+              <div key={c.n} className="century-item" onClick={() => {
+                setSelectedCentury(c)
+                globeRef.current?.pointOfView({ lat: c.lat, lng: c.lon, altitude: 1.2 }, 1200)
+              }}>
+                <span className="ci-num">#{c.n}</span>
+                <span className="ci-score">{fmtScore(c)}</span>
+                <span className="ci-opp">vs {c.opponent}</span>
+                <span className="ci-date">{fmtDate(c.date)}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-
-      {selectedCentury && (
-        <div className="card visible">
-          <button className="card-close" onClick={handleCardClose} aria-label="Close">×</button>
-          <div className="card-num">#{selectedCentury.n}</div>
-          <div className="card-score">{fmtScore(selectedCentury)}</div>
-          <div className="card-rows">
-            <div className="card-row"><span className="card-label">vs</span><span className="card-value">{selectedCentury.opponent}</span></div>
-            <div className="card-row"><span className="card-label">At</span><span className="card-value">{selectedCentury.ground}</span></div>
-            <div className="card-row"><span className="card-label">Country</span><span className="card-value">{selectedCentury.country}</span></div>
-            <div className="card-row"><span className="card-label">Format</span><span className="card-value">{selectedCentury.format}</span></div>
-            <div className="card-row"><span className="card-label">Date</span><span className="card-value">{fmtDate(selectedCentury.date)}</span></div>
-            <div className="card-row"><span className="card-label">Venue</span><span className="card-value">{selectedCentury.venueType}</span></div>
-          </div>
-        </div>
-      )}
 
       <div ref={containerRef} className="globe-container" onPointerDown={handleUserInteract} onWheel={handleUserInteract} />
 
@@ -426,6 +448,7 @@ export default function SachinGlobe() {
           <span className="year-label">1990</span>
           <div className="slider-wrap">
             <input type="range" className="slider" min="1990" max="2012" value={currentYear} step="1" onChange={handleSliderChange} />
+            <div className="year-bubble" style={{ left: `calc(${((currentYear - 1990) / 22) * 100}% - 20px)` }}>{currentYear}</div>
           </div>
           <span className="year-label">2012</span>
         </div>
@@ -446,17 +469,28 @@ export default function SachinGlobe() {
         .intro { position: absolute; bottom: 160px; left: 50%; transform: translateX(-50%); font-family: "Fraunces", serif; font-size: 18px; color: #fff; letter-spacing: 0.02em; pointer-events: none; opacity: 0; transition: opacity 0.6s; text-align: center; white-space: nowrap; z-index: 5; }
         .intro.visible { opacity: 0.95; }
         .intro-sub { font-family: "Inter", sans-serif; font-size: 10px; color: #8892a6; margin-top: 5px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 400; }
-        .card { position: absolute; top: 90px; right: 18px; width: 260px; background: rgba(10,14,26,0.94); border: 0.5px solid rgba(78,205,196,0.35); border-radius: 12px; padding: 16px 18px; z-index: 20; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity 0.25s, transform 0.25s; }
-        .card.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
-        .card-num { font-family: "Fraunces", serif; font-size: 26px; color: #4ecdc4; line-height: 1; font-weight: 500; }
-        .card-score { font-size: 20px; font-weight: 500; margin-top: 6px; letter-spacing: -0.01em; }
-        .card-rows { margin-top: 12px; }
-        .card-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 12px; gap: 12px; }
+        .right-panel { position: absolute; top: 90px; right: 18px; width: 200px; max-height: calc(100vh - 200px); overflow-y: auto; background: rgba(10,14,26,0.92); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px; z-index: 20; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity 0.4s; scrollbar-width: thin; scrollbar-color: rgba(78,205,196,0.3) transparent; }
+        .right-panel.visible { opacity: 1; pointer-events: auto; }
+        .right-panel::-webkit-scrollbar { width: 3px; }
+        .right-panel::-webkit-scrollbar-thumb { background: rgba(78,205,196,0.3); border-radius: 2px; }
+        .rp-header { font-size: 11px; color: #4ecdc4; font-weight: 500; padding: 4px 6px 8px; border-bottom: 0.5px solid rgba(255,255,255,0.08); margin-bottom: 4px; }
+        .rp-back { background: none; border: none; color: #8892a6; font-size: 11px; cursor: pointer; padding: 4px 6px; font-family: inherit; display: block; width: 100%; text-align: left; border-bottom: 0.5px solid rgba(255,255,255,0.08); margin-bottom: 4px; transition: color 0.15s; }
+        .rp-back:hover { color: #4ecdc4; }
+        .rp-century-detail { padding: 4px 2px; }
+        .card-num { font-family: "Fraunces", serif; font-size: 24px; color: #4ecdc4; line-height: 1; font-weight: 500; padding: 0 4px; }
+        .card-score { font-size: 18px; font-weight: 500; margin-top: 4px; padding: 0 4px; }
+        .card-rows { margin-top: 10px; }
+        .card-row { display: flex; justify-content: space-between; padding: 5px 4px; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 11px; gap: 8px; }
         .card-row:last-child { border-bottom: none; }
         .card-label { color: #8892a6; flex-shrink: 0; }
         .card-value { text-align: right; font-weight: 500; }
-        .card-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #8892a6; cursor: pointer; font-size: 22px; line-height: 1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: color 0.15s, background 0.15s; padding: 0; }
-        .card-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+        .century-item { padding: 7px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
+        .century-item:last-child { border-bottom: none; }
+        .century-item:hover { background: rgba(78,205,196,0.1); }
+        .ci-num { font-size: 10px; color: #4ecdc4; font-weight: 600; margin-right: 4px; }
+        .ci-score { font-size: 13px; font-weight: 600; color: #fff; margin-right: 4px; }
+        .ci-opp { font-size: 11px; color: #c8d2e0; display: block; margin-top: 2px; }
+        .ci-date { font-size: 10px; color: #8892a6; display: block; margin-top: 1px; }
         .left-panel { position: absolute; top: 108px; left: 22px; z-index: 5; opacity: 0; transition: opacity 0.8s; }
         .left-panel.visible { opacity: 1; }
         .legend { display: flex; flex-direction: column; gap: 7px; font-size: 12px; color: #8892a6; }
@@ -501,6 +535,7 @@ export default function SachinGlobe() {
         .slider { width: 100%; appearance: none; -webkit-appearance: none; height: 2px; background: rgba(255,255,255,0.18); border-radius: 2px; outline: none; margin: 0; }
         .slider::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
         .slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #4ecdc4; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(78,205,196,0.15); }
+        .year-bubble { position: absolute; top: -30px; background: #4ecdc4; color: #060a18; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; font-variant-numeric: tabular-nums; pointer-events: none; white-space: nowrap; }
         .share-btn { position: absolute; top: 22px; right: 120px; z-index: 10; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 18px; font-size: 11px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px; opacity: 0; transition: opacity 0.8s, background 0.15s, border-color 0.15s; }
         .share-btn.visible { opacity: 0.85; }
         .share-btn:hover { opacity: 1; background: rgba(78,205,196,0.15); border-color: rgba(78,205,196,0.4); }
@@ -513,13 +548,10 @@ export default function SachinGlobe() {
           .title { font-size: 22px; }
           .subtitle { font-size: 10px; max-width: 140px; }
           .counter { font-size: 26px; }
-          .card { width: calc(100% - 24px); right: 12px; left: 12px; top: 70px; padding: 12px 14px; }
-          .card-num { font-size: 22px; }
-          .card-score { font-size: 17px; }
           .left-panel { top: auto; bottom: 210px; left: 12px; }
           .legend { flex-direction: row; gap: 10px; font-size: 10px; }
           .stats-panel { display: none; }
-          .country-panel { display: none; }
+          .right-panel { width: calc(100% - 24px); right: 12px; left: 12px; top: auto; bottom: 185px; max-height: 180px; }
           .country-strip { display: flex; }
           .chips { gap: 5px; margin-bottom: 8px; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 2px; scrollbar-width: none; }
           .chips::-webkit-scrollbar { display: none; }
