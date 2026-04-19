@@ -341,7 +341,6 @@ export default function SachinGlobe() {
           <div className="legend-item"><span className="dot" style={{ background: "#4ecdc4" }} />Away</div>
           <div className="legend-item"><span className="dot" style={{ background: "#c9c9c9" }} />Neutral</div>
         </div>
-
         <div className="stats-panel">
           <div className="stats-title">{statsLabel}</div>
           <div className="stats-row">
@@ -406,6 +405,17 @@ export default function SachinGlobe() {
           ))}
         </div>
 
+        <div className="country-strip">
+          <div className={`cstrip-item ${selectedCountry === "all" ? "active" : ""}`} onClick={() => selectCountry("all")}>
+            All <span className="cstrip-count">{stats.total}</span>
+          </div>
+          {countryData.map((d) => (
+            <div key={d.country} className={`cstrip-item ${selectedCountry === d.country ? "active" : ""}`} onClick={() => selectCountry(d.country)}>
+              {d.country} <span className="cstrip-count">{d.count}</span>
+            </div>
+          ))}
+        </div>
+
         <div className="timeline">
           <button className="play-btn" onClick={handlePlayClick} title="Replay timeline">
             {playing
@@ -465,6 +475,12 @@ export default function SachinGlobe() {
         .chip { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.18); color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.18s; font-family: inherit; font-weight: 400; white-space: nowrap; }
         .chip:hover { background: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
         .chip.active { background: #4ecdc4; color: #060a18; border-color: #4ecdc4; font-weight: 500; }
+        .country-strip { display: none; overflow-x: auto; gap: 6px; padding: 0 2px 2px; margin-bottom: 8px; scrollbar-width: none; }
+        .country-strip::-webkit-scrollbar { display: none; }
+        .cstrip-item { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 16px; background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.15); font-size: 12px; color: #c8d2e0; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }
+        .cstrip-item:hover { background: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.4); }
+        .cstrip-item.active { background: rgba(78,205,196,0.2); border-color: #4ecdc4; color: #4ecdc4; font-weight: 500; }
+        .cstrip-count { font-size: 10px; opacity: 0.7; }
         .country-panel { position: absolute; top: 90px; right: 18px; z-index: 15; width: 150px; max-height: calc(100vh - 200px); overflow-y: auto; background: rgba(10,14,26,0.88); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px; opacity: 0; pointer-events: none; transition: opacity 0.4s; scrollbar-width: thin; scrollbar-color: rgba(78,205,196,0.3) transparent; }
         .country-panel.visible { opacity: 1; pointer-events: auto; }
         .country-panel::-webkit-scrollbar { width: 3px; }
@@ -493,18 +509,25 @@ export default function SachinGlobe() {
         .loading-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ecdc4; animation: pulse 1.3s ease-in-out infinite; }
         @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
         @media (max-width: 640px) {
-          .header { padding: 14px 16px; }
-          .title { font-size: 24px; }
-          .subtitle { font-size: 10px; max-width: 150px; }
-          .counter { font-size: 28px; }
-          .card { width: calc(100% - 32px); right: 16px; left: 16px; top: 80px; }
-          .left-panel { top: auto; bottom: 195px; left: 16px; }
-          .legend { flex-direction: row; gap: 12px; font-size: 10px; }
+          .header { padding: 12px 14px; }
+          .title { font-size: 22px; }
+          .subtitle { font-size: 10px; max-width: 140px; }
+          .counter { font-size: 26px; }
+          .card { width: calc(100% - 24px); right: 12px; left: 12px; top: 70px; padding: 12px 14px; }
+          .card-num { font-size: 22px; }
+          .card-score { font-size: 17px; }
+          .left-panel { top: auto; bottom: 210px; left: 12px; }
+          .legend { flex-direction: row; gap: 10px; font-size: 10px; }
           .stats-panel { display: none; }
           .country-panel { display: none; }
-          .controls { padding: 10px 12px 16px; }
-          .chip { font-size: 11px; padding: 5px 10px; }
-          .intro { bottom: 200px; font-size: 15px; }
+          .country-strip { display: flex; }
+          .chips { gap: 5px; margin-bottom: 8px; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; padding-bottom: 2px; scrollbar-width: none; }
+          .chips::-webkit-scrollbar { display: none; }
+          .chip { font-size: 11px; padding: 5px 10px; flex-shrink: 0; }
+          .controls { padding: 8px 12px 20px; }
+          .timeline { gap: 8px; }
+          .play-btn { width: 30px; height: 30px; }
+          .intro { bottom: 220px; font-size: 15px; }
           .share-btn { display: none; }
         }
       `}</style>
