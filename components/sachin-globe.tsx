@@ -266,6 +266,7 @@ export default function SachinGlobe() {
     handleUserInteract()
     setCurrentFilter(filter)
     setSelectedCentury(null)
+    setCurrentYear(2012)
   }
 
   const selectCountry = useCallback((country: string) => {
