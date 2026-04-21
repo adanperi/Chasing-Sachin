@@ -43,3 +43,13 @@ All data is static — no backend or API. `public/centuries.json` contains 100 c
 
 - `next.config.mjs` sets `typescript.ignoreBuildErrors: true` and `images.unoptimized: true`
 - No environment variables are required — the app is fully static
+
+## Coding behavior
+
+**Think before coding** — State assumptions explicitly. If a request is ambiguous (e.g. "add a filter" — which panel? which logic?), ask before writing code.
+
+**Simplicity first** — Write minimal code that solves the stated problem. No speculative features, unnecessary abstractions, or extra error handling for things that can't fail.
+
+**Surgical changes** — `sachin-globe.tsx` is intentionally monolithic; do not split or refactor it unless explicitly asked. When editing, touch only what the task requires. Don't improve adjacent code, reformat, or remove unrelated dead code — mention it instead.
+
+**Goal-driven execution** — For multi-step tasks, define what "done" looks like before starting and verify each step before moving to the next.
