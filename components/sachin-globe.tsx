@@ -34,6 +34,23 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
 }
 
+function decodeCountries(topo: any): any[] {
+  const [sx, sy] = topo.transform.scale
+  const [tx, ty] = topo.transform.translate
+  const arc = (i: number): number[][] => {
+    const raw = topo.arcs[i < 0 ? ~i : i]
+    let x = 0, y = 0
+    const pts = raw.map((d: number[]) => [x += d[0], y += d[1]])
+    if (i < 0) pts.reverse()
+    return pts.map((p: number[]) => [p[0] * sx + tx, p[1] * sy + ty])
+  }
+  const ring = (arcs: number[]): number[][] => { const pts = arcs.flatMap(arc); return [...pts, pts[0]] }
+  return topo.objects.countries.geometries.map((g: any) => ({
+    type: "Feature", properties: { layer: "country" },
+    geometry: { type: g.type, coordinates: g.type === "Polygon" ? g.arcs.map(ring) : g.arcs.map((rs: number[][]) => rs.map(ring)) }
+  }))
+}
+
 export default function SachinGlobe() {
   const containerRef = useRef<HTMLDivElement>(null)
   const globeRef = useRef<ReturnType<typeof import("globe.gl").default> | null>(null)
@@ -88,6 +105,7 @@ export default function SachinGlobe() {
         .onPointClick((c) => {
           const century = c as Century
           handleUserInteract()
+          if (idleRef.current) clearTimeout(idleRef.current)
           setSelectedCentury(century)
           setSelectedCountry(century.country)
           globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 0.04 }, 1800)
@@ -95,9 +113,11 @@ export default function SachinGlobe() {
 
       globeRef.current = globe
 
-      fetch("https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_urban_areas.geojson")
-        .then((r) => r.json())
-        .then((geojson: any) => {
+      Promise.all([
+        fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r => r.json()),
+        fetch("https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_urban_areas.geojson").then(r => r.json()),
+      ]).then(([world, geojson]: [any, any]) => {
+          const countryFeatures = decodeCountries(world)
           const cityFeatures = geojson.features
             .map((feature: any) => {
               const ring = feature.geometry.type === "Polygon"
@@ -109,14 +129,20 @@ export default function SachinGlobe() {
               if (!nearby.length) return null
               const venueType: Century["venueType"] = nearby.some(c => c.venueType === "Home") ? "Home"
                 : nearby.some(c => c.venueType === "Away") ? "Away" : "Neutral"
-              return { ...feature, properties: { venueType } }
+              return { ...feature, properties: { layer: "city", venueType } }
             })
             .filter(Boolean)
           globe
-            .polygonsData(cityFeatures)
-            .polygonCapColor((f: any) => f.properties.venueType === "Home" ? "rgba(255,209,102,0.08)" : f.properties.venueType === "Away" ? "rgba(78,205,196,0.08)" : "rgba(201,201,201,0.08)")
+            .polygonsData([...countryFeatures, ...cityFeatures])
+            .polygonCapColor((f: any) => {
+              if (f.properties.layer === "country") return "rgba(100,115,140,0.03)"
+              return f.properties.venueType === "Home" ? "rgba(255,209,102,0.08)" : f.properties.venueType === "Away" ? "rgba(78,205,196,0.08)" : "rgba(201,201,201,0.08)"
+            })
             .polygonSideColor(() => "transparent")
-            .polygonStrokeColor((f: any) => f.properties.venueType === "Home" ? "#ffd166" : f.properties.venueType === "Away" ? "#4ecdc4" : "#c9c9c9")
+            .polygonStrokeColor((f: any) => {
+              if (f.properties.layer === "country") return "rgba(140,155,180,0.25)"
+              return f.properties.venueType === "Home" ? "#ffd166" : f.properties.venueType === "Away" ? "#4ecdc4" : "#c9c9c9"
+            })
             .polygonAltitude(0.005)
         })
         .catch(() => {})
@@ -174,9 +200,10 @@ export default function SachinGlobe() {
       data = data.filter((c) => c.venueType === currentFilter)
     if (selectedCountry !== "all") data = data.filter((c) => c.country === selectedCountry)
     data = data.filter((c) => c.year <= currentYear)
-    const test = data.filter((c) => c.format === "Test").length
-    const odi = data.filter((c) => c.format === "ODI").length
-    return { total: data.length, test, odi }
+    const home = data.filter((c) => c.venueType === "Home").length
+    const away = data.filter((c) => c.venueType === "Away").length
+    const neutral = data.filter((c) => c.venueType === "Neutral").length
+    return { total: data.length, home, away, neutral }
   }, [centuries, currentFilter, selectedCountry, currentYear])
 
   const applyFilters = useCallback(
@@ -271,6 +298,7 @@ export default function SachinGlobe() {
       const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length
       const lng = pts.reduce((s, c) => s + c.lon, 0) / pts.length
       globeRef.current.controls().autoRotate = false
+      if (idleRef.current) clearTimeout(idleRef.current)
       globeRef.current.pointOfView({ lat, lng, altitude: 1.2 }, 1400)
     }
   }, [centuries, handleUserInteract])
@@ -311,7 +339,6 @@ export default function SachinGlobe() {
     { filter: "Neutral", label: `Neutral (${chipCounts.Neutral})` },
   ]
 
-  const maxBar = Math.max(stats.test, stats.odi, 1)
   const statsLabel = selectedCountry === "all" ? "All countries" : selectedCountry
 
   return (
@@ -350,19 +377,17 @@ export default function SachinGlobe() {
         </div>
         <div className="stats-panel">
           <div className="stats-title">{statsLabel}</div>
-          <div className="stats-row">
-            <span className="stats-label">Test</span>
-            <div className="stats-bar-wrap">
-              <div className="stats-bar" style={{ width: `${(stats.test / maxBar) * 100}%`, background: "#4ecdc4" }} />
-            </div>
-            <span className="stats-num">{stats.test}</span>
+          <div className="stat-chip home-chip">
+            <span className="stat-chip-label">Home</span>
+            <span className="stat-chip-num">{stats.home}</span>
           </div>
-          <div className="stats-row">
-            <span className="stats-label">ODI</span>
-            <div className="stats-bar-wrap">
-              <div className="stats-bar" style={{ width: `${(stats.odi / maxBar) * 100}%`, background: "#ffd166" }} />
-            </div>
-            <span className="stats-num">{stats.odi}</span>
+          <div className="stat-chip away-chip">
+            <span className="stat-chip-label">Away</span>
+            <span className="stat-chip-num">{stats.away}</span>
+          </div>
+          <div className="stat-chip neutral-chip">
+            <span className="stat-chip-label">Neutral</span>
+            <span className="stat-chip-num">{stats.neutral}</span>
           </div>
         </div>
       </div>
@@ -500,11 +525,15 @@ export default function SachinGlobe() {
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .stats-panel { margin-top: 18px; width: 160px; }
         .stats-title { font-size: 11px; color: #4ecdc4; font-weight: 500; margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .stats-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .stats-label { font-size: 12px; color: #8892a6; width: 26px; flex-shrink: 0; }
-        .stats-bar-wrap { flex: 1; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden; }
-        .stats-bar { height: 100%; border-radius: 5px; transition: width 0.4s ease; }
-        .stats-num { font-size: 12px; color: #fff; font-variant-numeric: tabular-nums; min-width: 20px; text-align: right; font-weight: 600; }
+        .stat-chip { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-radius: 8px; border: 0.5px solid; margin-bottom: 6px; }
+        .stat-chip-label { font-size: 11px; color: #8892a6; }
+        .stat-chip-num { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+        .home-chip { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.3); }
+        .home-chip .stat-chip-num { color: #ffd166; }
+        .away-chip { background: rgba(78,205,196,0.1); border-color: rgba(78,205,196,0.3); }
+        .away-chip .stat-chip-num { color: #4ecdc4; }
+        .neutral-chip { background: rgba(201,201,201,0.07); border-color: rgba(201,201,201,0.2); }
+        .neutral-chip .stat-chip-num { color: #c9c9c9; }
         .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 16px 18px; z-index: 10; background: linear-gradient(to top, rgba(6,10,24,0.98) 40%, transparent); opacity: 0; transform: translateY(10px); transition: opacity 0.8s, transform 0.8s; }
         .controls.visible { opacity: 1; transform: translateY(0); }
         .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px; }
