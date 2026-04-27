@@ -123,6 +123,11 @@ export default function SachinGlobe() {
               const ring = feature.geometry.type === "Polygon"
                 ? feature.geometry.coordinates[0]
                 : feature.geometry.coordinates[0][0]
+              const lons = ring.map((p: number[]) => p[0])
+              const lats = ring.map((p: number[]) => p[1])
+              const lonSpan = Math.max(...lons) - Math.min(...lons)
+              const latSpan = Math.max(...lats) - Math.min(...lats)
+              if (lonSpan > 2 || latSpan > 2) return null
               const cLon = ring.reduce((s: number, p: number[]) => s + p[0], 0) / ring.length
               const cLat = ring.reduce((s: number, p: number[]) => s + p[1], 0) / ring.length
               const nearby = centuries.filter(c => haversineKm(cLat, cLon, c.lat, c.lon) < 50)
