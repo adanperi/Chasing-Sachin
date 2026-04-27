@@ -82,7 +82,7 @@ export default function SachinGlobe() {
           handleUserInteract()
           setSelectedCentury(century)
           setSelectedCountry(century.country)
-          globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 0.5 }, 1200)
+          globe.pointOfView({ lat: century.lat, lng: century.lon, altitude: 0.04 }, 1800)
         })(containerRef.current!)
 
       globeRef.current = globe
@@ -412,7 +412,7 @@ export default function SachinGlobe() {
             {countryCenturies.map((c) => (
               <div key={c.n} className="century-item" onClick={() => {
                 setSelectedCentury(c)
-                globeRef.current?.pointOfView({ lat: c.lat, lng: c.lon, altitude: 0.5 }, 1200)
+                globeRef.current?.pointOfView({ lat: c.lat, lng: c.lon, altitude: 0.04 }, 1800)
               }}>
                 <span className="ci-num">#{c.n}</span>
                 <span className="ci-score">{fmtScore(c)}</span>
