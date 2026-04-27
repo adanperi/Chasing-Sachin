@@ -26,6 +26,14 @@ const fmtScore = (c: Century) => c.score + (c.notOut ? "*" : "")
 const colorFor = (c: Century) => (c.venueType === "Home" ? "#ffd166" : c.venueType === "Away" ? "#4ecdc4" : "#c9c9c9")
 const sizeFor = (c: Century) => (c.n === 100 ? 0.95 : c.score >= 200 ? 0.78 : c.score >= 150 ? 0.56 : 0.42)
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+}
+
 export default function SachinGlobe() {
   const containerRef = useRef<HTMLDivElement>(null)
   const globeRef = useRef<ReturnType<typeof import("globe.gl").default> | null>(null)
@@ -87,15 +95,28 @@ export default function SachinGlobe() {
 
       globeRef.current = globe
 
-      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+      fetch("https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_urban_areas.geojson")
         .then((r) => r.json())
-        .then((world) => {
-          const countries = topoFeature(world, world.objects.countries)
+        .then((geojson: any) => {
+          const cityFeatures = geojson.features
+            .map((feature: any) => {
+              const ring = feature.geometry.type === "Polygon"
+                ? feature.geometry.coordinates[0]
+                : feature.geometry.coordinates[0][0]
+              const cLon = ring.reduce((s: number, p: number[]) => s + p[0], 0) / ring.length
+              const cLat = ring.reduce((s: number, p: number[]) => s + p[1], 0) / ring.length
+              const nearby = centuries.filter(c => haversineKm(cLat, cLon, c.lat, c.lon) < 50)
+              if (!nearby.length) return null
+              const venueType: Century["venueType"] = nearby.some(c => c.venueType === "Home") ? "Home"
+                : nearby.some(c => c.venueType === "Away") ? "Away" : "Neutral"
+              return { ...feature, properties: { venueType } }
+            })
+            .filter(Boolean)
           globe
-            .polygonsData(countries.features)
-            .polygonCapColor(() => "rgba(100,115,140,0.05)")
-            .polygonSideColor(() => "rgba(78,205,196,0.02)")
-            .polygonStrokeColor(() => "rgba(140,155,180,0.35)")
+            .polygonsData(cityFeatures)
+            .polygonCapColor((f: any) => f.properties.venueType === "Home" ? "rgba(255,209,102,0.08)" : f.properties.venueType === "Away" ? "rgba(78,205,196,0.08)" : "rgba(201,201,201,0.08)")
+            .polygonSideColor(() => "transparent")
+            .polygonStrokeColor((f: any) => f.properties.venueType === "Home" ? "#ffd166" : f.properties.venueType === "Away" ? "#4ecdc4" : "#c9c9c9")
             .polygonAltitude(0.005)
         })
         .catch(() => {})
@@ -120,39 +141,6 @@ export default function SachinGlobe() {
       }
     })
   }, [loading, centuries])
-
-  function topoFeature(topology: any, obj: any) {
-    function arcFn(i: number, points: number[][]) {
-      if (points.length) points.pop()
-      const arr = topology.arcs[i < 0 ? ~i : i]
-      let x = 0, y = 0
-      const res = arr.map((p: number[]) => [(x += p[0]), (y += p[1])])
-      if (i < 0) res.reverse()
-      res.forEach((p: number[]) =>
-        points.push([
-          p[0] * (topology.transform?.scale[0] || 1) + (topology.transform?.translate[0] || 0),
-          p[1] * (topology.transform?.scale[1] || 1) + (topology.transform?.translate[1] || 0),
-        ])
-      )
-    }
-    function polygon(arcs: number[]) {
-      const pts: number[][] = []
-      arcs.forEach((i) => arcFn(i, pts))
-      pts.push(pts[0])
-      return pts
-    }
-    function geom(g: any) {
-      if (g.type === "Polygon") return { type: "Polygon", coordinates: g.arcs.map(polygon) }
-      if (g.type === "MultiPolygon") return { type: "MultiPolygon", coordinates: g.arcs.map((rs: any) => rs.map(polygon)) }
-      return null
-    }
-    return {
-      type: "FeatureCollection",
-      features: obj.geometries
-        .map((g: any) => ({ type: "Feature", properties: g.properties || {}, geometry: geom(g) }))
-        .filter((f: any) => f.geometry),
-    }
-  }
 
   const countryList = useMemo(() => {
     const seen = new Set<string>()
